@@ -1,0 +1,258 @@
+import java.sql.*;
+import java.util.Scanner;
+
+class votingSystem {
+    private static  String mailAdmin = "parasbishnoi00@gmail.com";
+    private static String KEY = "G08O-76TL" ;
+
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/voterinfo";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "root123";
+
+     static Scanner input = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        System.out.println("------------------------------------------------------------------------------------------------------------------------");
+        System.out.println("Hello and welcome to the voting platform!! \n Please enter the required credentials to continue forward.\n");
+        System.out.print("Please select either 1 or 2. \n 1 for login \n 2 for applying for new registration \n Enter your selection:");
+        int select = input.nextInt();
+        input.nextLine();
+        if (select == 1){
+            System.out.print("Enter your Email ID:");
+            String email = input.nextLine();
+            checkEmail(email);
+        }
+        else if (select==2){
+            System.out.println("Welcome to voter registration platform!!");
+            register();
+            main(args);
+        }
+        else{
+            System.out.println("Invalid selection, please retry!");
+            main(args);
+        }
+    }
+
+    private static void register(){
+        System.out.println("Welcome to registration module, Please continue with submitting details.");
+        System.out.print("Enter your name: ");
+        String Name = input.nextLine();
+        System.out.print("Enter your emailID: ");
+        String Email = input.nextLine();
+        System.out.print("Enter your Date of Birth (in YYYY-MM-DD format): ");
+        String DOB = input.nextLine();
+        System.out.print("Enter your address: ");
+        String Address = input.nextLine();
+        System.out.print("Enter your password (6 characters): ");
+        String Password = input.nextLine();
+        saveForm(Name, Email, DOB, Address, Password);
+    }
+
+    private static void checkEmail(String s1) {
+        if (s1.equals(mailAdmin) ){
+            System.out.print("Please Enter your Security key:");
+            String key1 = input.nextLine();
+            if (key1.equals(KEY)){
+                System.out.println("Welcome Admin.");
+                adminBlock();
+
+            }
+            else{
+                System.out.println("Wrong Key, please retry!");
+                checkEmail(s1);
+            }
+        }
+        else {
+            verifyUser(s1);
+        }
+
+    }
+
+    private static void adminBlock(){
+        System.out.println("Welcome back, please continue with the following choices.");
+        System.out.println("Select:\n 1 for adding a new voter.\n 2 for removing a voter.\n 3 for adding a candidate. \n 4 to see the results and publish them . \n 5 for ending a vote and delete its data.");
+        int select = input.nextInt();
+        input.nextLine();
+        if (select == 1){
+            System.out.println("Welcome to voter addition wizard! ");
+            fetchForms();
+            System.out.println("Select 1 for accepting the form and 0 for rejecting and deleting the form");
+            System.out.print("Enter your selection:");
+            int select1 = input.nextInt();
+            input.nextLine();
+            if (select1 == 1) {
+                System.out.println("Enter the form number to verify:");
+                int formNo = input.nextInt();
+                input.nextLine();
+                verifyForm(formNo);
+            }
+            else{
+                System.out.println("Invalid choice, Please continue again :)");
+                adminBlock();
+                }
+            }
+        else if (select == 2){
+            System.out.println("Welcome to deletion wizard! \nPlease enter the voter ID number you want to delete:");
+            int voterID = input.nextInt();
+            input.nextLine();
+            System.out.println("Are you sure you want to deleter user with voter ID"+voterID+"\nType YES to continue");
+            String confirm = input.nextLine();
+            if(confirm.equals("YES")){
+                String tableName = "voterList";
+                deleteData(voterID,tableName);
+            }
+            else{
+                adminBlock();
+            }
+        }
+    }
+
+    private static void verifyUser(String s2){
+        int found = 0;
+        try(Connection con = DriverManager.getConnection(DB_URL,DB_USER,DB_PASSWORD);
+            Statement stmt = con.createStatement()){
+            ResultSet rs = stmt.executeQuery("SELECT email,name,password FROM voterList");
+
+            while (rs.next()) {
+                String mailDB = rs.getString("email");
+                String Name = rs.getString("name");
+                String Password = rs.getString("password");
+                if (s2.equals(mailDB)){
+                    System.out.println("Hello "+ Name);
+                    found = 1;
+                    System.out.print("Please enter your Password: ");
+                    String Pass = input.nextLine();
+                    if (Password.equals(Pass)){
+                        vote();
+                    }
+                    else{
+                        System.out.println("Invalid password,Please retry");
+                        verifyUser(mailDB);
+                    }
+                }
+            }
+            con.close();
+        }
+
+        catch (SQLException e){
+            System.out.println("Database error"+e.getMessage());
+        }
+
+        if (found == 0){
+            System.out.println("Email not found, please enter the correct email or register if new user!");
+        }
+    }
+
+    public static void vote(){
+        System.out.println("Welcome to the voting window, please continue with following options.");
+        System.out.println("Select 1 for voting.\nSelect 2 for viewing manifestos.");
+    }
+
+    public static void saveForm(String name , String mail, String dob, String address, String pass){
+        String command = "insert into voterAdd (name, email, DOB,  address,password ) values (?,?,?,?,?)";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(command)) {
+
+            stmt.setString(1, name);
+            stmt.setString(2, mail);
+            stmt.setString(3,dob);
+            stmt.setString(4,address);
+            stmt.setString(5,pass);
+
+            int rowsInserted = stmt.executeUpdate();
+
+            if (rowsInserted > 0) {
+                System.out.println("Data successfully saved to the database!");
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Database error: " + e.getMessage());
+        }
+    }
+
+    private static void saveUser(int id, String name , String mail, String dob, String address, String pass){
+        String command = "insert into voterList (name, email, DOB,  address,password ) values (?,?,?,?,?)";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(command)) {
+
+            stmt.setString(1, name);
+            stmt.setString(2, mail);
+            stmt.setString(3,dob);
+            stmt.setString(4,address);
+            stmt.setString(5,pass);
+
+            int rowsInserted = stmt.executeUpdate();
+
+            if (rowsInserted > 0) {
+                System.out.println("Data successfully saved to the database!");
+                String dataDelete = "voterAdd";
+                deleteData(id,dataDelete);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Database error: " + e.getMessage());
+        }
+    }
+
+    private static void verifyForm( int id){
+        try(Connection con = DriverManager.getConnection(DB_URL,DB_USER,DB_PASSWORD);
+            Statement stmt = con.createStatement()){
+            ResultSet rs = stmt.executeQuery("SELECT * FROM voterAdd where id =" +id);
+
+            while(rs.next()) {
+                String Name = rs.getString("name");
+                String Email = rs.getString("email");
+                String Address = rs.getString("address");
+                String DOB = rs.getString("DOB");
+                String Pass = rs.getString("password");
+                saveUser(id,Name,Email,DOB,Address,Pass);
+            }
+            con.close();
+        }
+
+        catch (SQLException e){
+            System.out.println("Database error"+e.getMessage());
+        }
+    }
+
+    public static void fetchForms(){
+        try(Connection con = DriverManager.getConnection(DB_URL,DB_USER,DB_PASSWORD);
+            Statement stmt = con.createStatement()){
+            ResultSet rs = stmt.executeQuery("SELECT * FROM voterAdd");
+
+            while(rs.next()) {
+                String Pass = rs.getString("password");
+                System.out.println("FormID="+rs.getInt("id") + "\n" + "Name="+rs.getString("name")+ "\n" +"Email="+ rs.getString("email")+"\n"+"Date of Birth="+rs.getString("DOB")+"\n"+"Address="+rs.getString("address"));
+
+            }
+            con.close();
+        }
+
+        catch (SQLException e){
+            System.out.println("Database error"+e.getMessage());
+        }
+    }
+
+    public static void deleteData(int id,String table){
+        try{
+            Connection con = DriverManager.getConnection(DB_URL,DB_USER,DB_PASSWORD);
+            String query = "DELETE FROM "+table+" WHERE id = ?";
+            PreparedStatement pst = con.prepareStatement(query);
+            pst.setInt(1, id);
+            int rowsAffected = pst.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Row deleted successfully!");
+                adminBlock();
+            } else {
+                System.out.println("No such row found.");
+            }
+            pst.close();
+            con.close();
+
+        } catch (Exception e) {
+            System.out.println("Error occurred during delete phase: "+e.getMessage());
+        }
+    }
+    }
