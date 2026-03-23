@@ -4,8 +4,10 @@ import javax.swing.JOptionPane;
 
 class votingSystem {
     private static final String mailAdmin = "parasbishnoi00@gmail.com";
-    private static final String KEY = "G08O-76TL" ;
+    private static final String KEY = "G08O-73TL" ;
     private static int dataFound = 0;
+    private static int hasVoted = 0;
+    private static int resultsDeclared = 0;
 
     private static final String DB_URL = "jdbc:mysql://localhost:3306/voterinfo";
     private static final String DB_USER = "root";
@@ -15,7 +17,7 @@ class votingSystem {
 
     public static void main(String[] args) {
         JOptionPane.showMessageDialog(null,"Welcome to the voting platform!!");
-        System.out.print("Please select \n1 for login \n2 for applying for new registration \n3 for filling out the nomination form. \nEnter your selection:");
+        System.out.print("Please select \n1 for login \n2 for applying for new registration \n3 for filling out the nomination form. \n4 for exiting the program. \nEnter your selection:");
         int select = input.nextInt();
         input.nextLine();
         if (select == 1){
@@ -28,17 +30,11 @@ class votingSystem {
             register();
             main(args);
         } else if (select==3){
-            System.out.print("Enter your Name: ");
-            String Name = input.nextLine();
-            System.out.print("Enter your Gender: ");
-            String gender = input.nextLine();
-            System.out.print("Enter your Date of birth (in YYYY-MM-DD format): ");
-            String DOB = input.nextLine();
-            System.out.print("Enter your education qualification: ");
-            String education = input.nextLine();
-            System.out.print("Enter your Manifesto: ");
-            String manifesto = input.nextLine();
-            addCandidate(Name,DOB, manifesto, education, gender );
+            JOptionPane.showMessageDialog(null,"The nomination form.");
+            main(args);
+        }
+        else if (select == 4) {
+            System.exit(0);
         }
         else{
             System.out.println("Invalid selection, please retry!");
@@ -63,6 +59,20 @@ class votingSystem {
         saveForm(Name, Email, DOB, Address, Password,Gender);
     }
 
+    private static void candidateRegister(){
+        System.out.print("Enter your Name: ");
+        String Name = input.nextLine();
+        System.out.print("Enter your Gender: ");
+        String gender = input.nextLine();
+        System.out.print("Enter your Date of birth (in YYYY-MM-DD format): ");
+        String DOB = input.nextLine();
+        System.out.print("Enter your education qualification: ");
+        String education = input.nextLine();
+        System.out.print("Enter your Manifesto: ");
+        String manifesto = input.nextLine();
+        addCandidate(Name,DOB, manifesto, education, gender );
+    }
+
     private static void checkEmail(String s1) {
         if (s1.equals(mailAdmin) ){
             System.out.print("Please Enter your Security key:");
@@ -84,8 +94,8 @@ class votingSystem {
     }
 
     private static void adminBlock(){
-        System.out.println("Welcome back, please continue with the following choices.");
-        System.out.println("Select:\n 1 for adding a new voter.\n 2 for removing a voter.\n 3 for adding a candidate. \n 4 to see the results and publish them . \n 5 for ending a vote and delete its data\nEnter your selection:");
+        JOptionPane.showMessageDialog(null,"The ADMIN block, continue with the choices!");
+        System.out.println("1 for adding a new voter.\n2 for removing a voter.\n3 for adding a candidate. \n4 to declare the results. \n5 for exiting the admin block.\nEnter your selection:");
         int select = input.nextInt();
         input.nextLine();
         if (select == 1){
@@ -148,6 +158,17 @@ class votingSystem {
                 deleteData(id, tableName);
             }
         }
+        else if (select == 4){
+            JOptionPane.showMessageDialog(null,"Welcome to the results window!");
+            showResult();
+        }
+        else if (select ==5){
+            main(new String[]{});
+        }
+        else{
+            JOptionPane.showMessageDialog(null,"Invalid choice, please retry!");
+            adminBlock();
+        }
     }
     private static void verifyUser(String s2){
         int found = 0;
@@ -165,7 +186,7 @@ class votingSystem {
                     System.out.print("Please enter your Password: ");
                     String Pass = input.nextLine();
                     if (Password.equals(Pass)){
-                        vote();
+                        userBlock(s2);
                     }
                     else{
                         System.out.println("Invalid password,Please retry");
@@ -177,7 +198,7 @@ class votingSystem {
         }
 
         catch (SQLException e){
-            System.out.println("Database error"+e.getMessage());
+            System.out.println("Database error in verify user "+e.getMessage());
         }
 
         if (found == 0){
@@ -206,15 +227,52 @@ class votingSystem {
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Database error: " + e.getMessage());
+            System.err.println("Database error in add candidate " + e.getMessage());
             main(new String[]{});
         }
     }
 
 
-    private static void vote(){
+    private static void userBlock(String mail){
         System.out.println("Welcome to the voting window, please continue with following options.");
-        System.out.println("Select 1 for voting.\nSelect 2 for viewing manifestos.");
+        System.out.println("Select 1 for voting.\nSelect 2 for knowing your candidates. \n3 for seeing the results. \n3 for logout.");
+        System.out.print("Enter your selection: ");
+        int select = input.nextInt();
+        input.nextLine();
+        if (select == 1){
+            if (resultsDeclared == 0){
+                checkEligibility(mail);
+                vote(mail);
+            }
+            else{
+                JOptionPane.showMessageDialog(null, "The results are already declared, can't vote now");
+                userBlock(mail);
+            }
+        }
+        else if(select == 2){
+            System.out.println("The information of the candidates is :- ");
+            fetchCandidateInfo();
+            userBlock(mail);
+        }
+        else if (select == 3){
+            main(new String[]{});
+        }
+    }
+
+    private static void vote(String userMail){
+        if (hasVoted == 0){
+            System.out.println("The voting block");
+            fetchCandidates();
+            System.out.print("Please enter the ID number you want to vote for: ");
+            int selectId = input.nextInt();
+            input.nextLine();
+            registerVote(selectId,userMail);
+        }
+        else {
+            JOptionPane.showMessageDialog(null, "You have already voted, redirecting to the home page.");
+            main(new String[]{});
+        }
+
     }
 
     private static void saveForm(String name , String mail, String dob, String address, String pass,String gender){
@@ -233,16 +291,16 @@ class votingSystem {
             int rowsInserted = stmt.executeUpdate();
 
             if (rowsInserted > 0) {
-                System.out.println("Your form has been successfully submitted!");
+                JOptionPane.showMessageDialog(null,"Your form has been successfully submitted!");
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Database error: " + e.getMessage());
+            System.err.println("Database error in save form: " + e.getMessage());
         }
     }
 
     private static void saveUser(int id, String name , String mail, String dob, String address, String pass,String gender){
-        String command = "insert into voterList (name, email, DOB,  address,password ) values (?,?,?,?,?,?)";
+        String command = "insert into voterList (name, email, DOB,  address,password,gender ) values (?,?,?,?,?,?)";
 
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement stmt = conn.prepareStatement(command)) {
@@ -257,13 +315,13 @@ class votingSystem {
             int rowsInserted = stmt.executeUpdate();
 
             if (rowsInserted > 0) {
-                System.out.println("Data successfully saved to the database!");
+                JOptionPane.showMessageDialog(null, "The form has been successfully verified!");
                 String dataDelete = "voterAdd";
                 deleteData(id,dataDelete);
             }
 
         } catch (SQLException e) {
-            System.err.println("Database error: " + e.getMessage());
+            System.err.println("Database error in save user: " + e.getMessage());
         }
     }
 
@@ -297,7 +355,7 @@ class votingSystem {
         }
 
         catch (SQLException e){
-            System.out.println("Database error"+e.getMessage());
+            System.out.println("Database error in verify form "+e.getMessage());
         }
     }
 
@@ -322,7 +380,68 @@ class votingSystem {
             }
 
         } catch (SQLException e) {
-            System.err.println("Database error: " + e.getMessage());
+            System.err.println("Database error save candidate " + e.getMessage());
+        }
+    }
+
+    private static void checkEligibility(String mail){
+        try(Connection con = DriverManager.getConnection(DB_URL,DB_USER,DB_PASSWORD);
+            Statement stmt = con.createStatement()){
+            ResultSet rs = stmt.executeQuery("SELECT * FROM voterList WHERE email = "+" ' "+ mail +" ' ");
+
+
+
+            while(rs.next()) {
+                int eligible = rs.getInt("hasVoted");
+                if (eligible == 1){
+                    hasVoted = 1;
+                }
+            }
+            con.close();
+        }
+
+        catch (SQLException e){
+            System.out.println("Database error in check eligibility"+e.getMessage());
+        }
+    }
+
+    private static void registerVote(int id,String email){
+        String command = "UPDATE candidateList SET votes = votes+1 where id = ?";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(command)) {
+
+            stmt.setInt(1, id);
+
+            int rowsInserted = stmt.executeUpdate();
+
+            if (rowsInserted > 0) {
+                System.out.println(" Data successfully saved to the database!");
+                hasVoted(email);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Database error in register vote " + e.getMessage());
+        }
+    }
+
+    private static void hasVoted(String mail){
+        String command = "UPDATE voterList SET hasVoted = 1 where email = ?";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(command)) {
+
+            stmt.setString(1, mail);
+
+            int rowsInserted = stmt.executeUpdate();
+
+            if (rowsInserted > 0) {
+                System.out.println("Data successfully saved to the database!");
+
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Database error in has voted " + e.getMessage());
         }
     }
 
@@ -352,7 +471,56 @@ class votingSystem {
         }
 
         catch (SQLException e){
-            System.out.println("Database error"+e.getMessage());
+            System.out.println("Database error in fetch forms "+e.getMessage());
+        }
+    }
+
+    private static void fetchCandidates(){
+        try(Connection con = DriverManager.getConnection(DB_URL,DB_USER,DB_PASSWORD);
+            Statement stmt = con.createStatement()){
+            ResultSet rs = stmt.executeQuery("SELECT * FROM candidateList");
+
+            while(rs.next()) {
+                System.out.println("ID="+rs.getInt("id") + " " + "Name="+rs.getString("name"));
+            }
+            con.close();
+        }
+
+        catch (SQLException e){
+            System.out.println("Database error in fetch candidate"+e.getMessage());
+        }
+    }
+
+    private static void fetchCandidateInfo(){
+        try(Connection con = DriverManager.getConnection(DB_URL,DB_USER,DB_PASSWORD);
+            Statement stmt = con.createStatement()){
+            ResultSet rs = stmt.executeQuery("SELECT * FROM candidateList");
+
+            while(rs.next()) {
+                System.out.println("Name="+rs.getString("name") + "\n" + "Manifesto="+rs.getString("manifesto")+ "\n"+"Education="+rs.getString("education")+"\nGender="+rs.getString("gender"));
+            }
+            con.close();
+        }
+
+        catch (SQLException e){
+            System.out.println("Database error fetch candidate info"+e.getMessage());
+        }
+    }
+
+    private static void showResult(){
+        try(Connection con = DriverManager.getConnection(DB_URL,DB_USER,DB_PASSWORD);
+            Statement stmt = con.createStatement()){
+            ResultSet rs = stmt.executeQuery("SELECT * FROM candidateList");
+
+            while(rs.next()) {
+                System.out.println("Name=" + rs.getString("name")+"|"+"Votes="+rs.getInt("votes"));
+                resultsDeclared = 1;
+            }
+            con.close();
+        }
+
+        catch (SQLException e){
+            System.out.println("Database error in show results"+e.getMessage());
         }
     }
 
